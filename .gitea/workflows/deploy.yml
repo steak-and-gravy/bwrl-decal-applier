@@ -23,6 +23,10 @@ jobs:
             --name decal-applier \
             --restart unless-stopped \
             --network web \
-            --env-file /home/ljtijhuis/services/decal-applier/.env \
+            -e PORT=3001 \
+            -e NODE_ENV=production \
+            -e "ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}" \
+            -e "RATE_LIMIT_GLOBAL=${{ secrets.RATE_LIMIT_GLOBAL }}" \
+            -e "RATE_LIMIT_APPLY=${{ secrets.RATE_LIMIT_APPLY }}" \
             -p 3001:3001 \
             decal-applier:latest
