@@ -94,7 +94,8 @@ applyRouter.post('/', upload.single('livery'), async (req: Request, res: Respons
     res.setHeader('Content-Type', 'image/png');
     res.setHeader('Content-Disposition', 'attachment; filename="livery-with-decals.png"');
     res.send(resultBuffer);
-  } catch {
+  } catch (err) {
+    console.error('Failed to apply decals:', err);
     res
       .status(422)
       .json({ error: 'Could not process the uploaded image. Ensure it is a valid PNG, TGA, or PSD file.' });
