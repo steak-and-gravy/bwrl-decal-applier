@@ -203,9 +203,10 @@ async function decodePsd(
       height: psdFile.height,
       channels: 4,
     };
-  } catch {
+  } catch (err) {
     // @webtoon/psd could not parse this PSD (e.g. flat/merged PSD with no layer data).
     // Fall back to decoding the merged Image Data section directly.
+    console.warn('PSD layer parsing failed, falling back to merged image data:', err);
   }
 
   return decodePsdImageData(buffer);

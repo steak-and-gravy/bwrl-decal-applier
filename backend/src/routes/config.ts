@@ -46,7 +46,8 @@ configRouter.get('/', async (_req, res) => {
     }
 
     res.json({ carModels });
-  } catch {
+  } catch (err) {
+    console.error('Failed to load configuration:', err);
     res.status(500).json({ error: 'Failed to load configuration' });
   }
 });
