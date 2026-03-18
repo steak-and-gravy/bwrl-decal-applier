@@ -13,6 +13,8 @@ app.use(cors({
   origin: allowedOrigins.length === 1 ? allowedOrigins[0] : allowedOrigins,
 }));
 app.use(express.json());
+// Trust first proxy (Caddy) so rate limiter sees real client IPs
+app.set('trust proxy', 1);
 app.use(globalLimiter);
 
 app.use('/health', healthRouter);
