@@ -231,20 +231,53 @@ function decodeTga(
   const bpp = buffer[16];
   const imageDescriptor = buffer[17];
 
-  // Only handle uncompressed true-color (type 2) without a color map, 24 or 32 bpp
-  if (colorMapType !== 0 || imageType !== 2 || (bpp !== 24 && bpp !== 32)) return null;
+  // Handle uncompressed (type 2) and RLE-compressed (type 10) true-color, 24 or 32 bpp
+  if (colorMapType !== 0 || (imageType !== 2 && imageType !== 10) || (bpp !== 24 && bpp !== 32)) return null;
   if (width === 0 || height === 0) return null;
 
   const bytesPerPixel = bpp / 8;
   const dataOffset = 18 + idLength;
-  if (buffer.length < dataOffset + width * height * bytesPerPixel) return null;
+  const totalPixels = width * height;
 
   const channels: 3 | 4 = bpp === 32 ? 4 : 3;
-  const pixelData = buffer.subarray(dataOffset, dataOffset + width * height * bytesPerPixel);
+
+  let pixelData: Buffer;
+
+  if (imageType === 2) {
+    // Uncompressed
+    if (buffer.length < dataOffset + totalPixels * bytesPerPixel) return null;
+    pixelData = Buffer.from(buffer.subarray(dataOffset, dataOffset + totalPixels * bytesPerPixel));
+  } else {
+    // RLE-compressed (type 10)
+    pixelData = Buffer.alloc(totalPixels * bytesPerPixel);
+    let srcPos = dataOffset;
+    let dstPos = 0;
+    while (dstPos < totalPixels * bytesPerPixel) {
+      if (srcPos >= buffer.length) return null;
+      const header = buffer[srcPos++];
+      const count = (header & 0x7f) + 1;
+      if (header & 0x80) {
+        // Run-length packet: one pixel repeated `count` times
+        if (srcPos + bytesPerPixel > buffer.length) return null;
+        for (let i = 0; i < count; i++) {
+          buffer.copy(pixelData, dstPos, srcPos, srcPos + bytesPerPixel);
+          dstPos += bytesPerPixel;
+        }
+        srcPos += bytesPerPixel;
+      } else {
+        // Raw packet: `count` pixels follow
+        const rawBytes = count * bytesPerPixel;
+        if (srcPos + rawBytes > buffer.length) return null;
+        buffer.copy(pixelData, dstPos, srcPos, srcPos + rawBytes);
+        dstPos += rawBytes;
+        srcPos += rawBytes;
+      }
+    }
+  }
 
   // Convert BGR/BGRA → RGB/RGBA
-  const rgba = Buffer.alloc(width * height * channels);
-  for (let i = 0; i < width * height; i++) {
+  const rgba = Buffer.alloc(totalPixels * channels);
+  for (let i = 0; i < totalPixels; i++) {
     const src = i * bytesPerPixel;
     const dst = i * channels;
     rgba[dst] = pixelData[src + 2]; // R
